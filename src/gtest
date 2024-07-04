@@ -1,0 +1,99 @@
+#include <gtest/gtest.h>
+#include "backend.cpp"  
+
+// Test the Player class
+TEST(PlayerTest, Initialization) {
+    Player player("Player 1", {0, 0}, PlayerTurn::PLAYER1);
+    EXPECT_EQ(player.getPlayerID(), "Player 1");
+    EXPECT_EQ(player.getCurrentPosition(), std::make_pair(0, 0));
+    EXPECT_FALSE(player.getHasWon());
+    EXPECT_EQ(player.getTurn(), PlayerTurn::PLAYER1);
+}
+
+TEST(PlayerTest, Movement) {
+    Player player("Player 1", {5, 5}, PlayerTurn::PLAYER1);
+
+    player.move('W');
+    EXPECT_EQ(player.getCurrentPosition(), std::make_pair(4, 5));
+
+    player.move('S');
+    EXPECT_EQ(player.getCurrentPosition(), std::make_pair(5, 5));
+
+    player.move('A');
+    EXPECT_EQ(player.getCurrentPosition(), std::make_pair(5, 4));
+
+    player.move('D');
+    EXPECT_EQ(player.getCurrentPosition(), std::make_pair(5, 5));
+}
+
+// Test the Portal class
+TEST(PortalTest, SpawnPortals) {
+    Portal portal;
+    portal.spawnPortals();
+
+    auto portalA = portal.getPortalAPosition();
+    auto portalB = portal.getPortalBPosition();
+
+    EXPECT_NE(portalA, std::make_pair(-1, -1));
+    EXPECT_NE(portalB, std::make_pair(-1, -1));
+    EXPECT_NE(portalA, portalB);
+}
+
+// Test the Power class
+TEST(PowerTest, SpawnPowers) {
+    Power power;
+    power.spawnPowers();
+
+    EXPECT_TRUE(power.isPowerPresent());
+    EXPECT_NE(power.getPosition(), std::make_pair(-1, -1));
+    EXPECT_NE(power.getPowerType(), PowerType::NONE);
+}
+
+// Test the Treasure class
+TEST(TreasureTest, PlaceTreasureEquidistant) {
+    Treasure treasure;
+    std::pair<int, int> player1Start = {0, 0};
+    std::pair<int, int> player2Start = {rows - 1, columns - 1};
+    treasure.placeTreasureEquidistant(rows, columns, player1Start, player2Start);
+
+    auto position = treasure.getPosition();
+    int distanceToPlayer1 = std::abs(position.first - player1Start.first) + std::abs(position.second - player1Start.second);
+    int distanceToPlayer2 = std::abs(position.first - player2Start.first) + std::abs(position.second - player2Start.second);
+
+    EXPECT_EQ(distanceToPlayer1, distanceToPlayer2);
+}
+
+// Test the nodeMatrix class
+TEST(nodeMatrixTest, Initialization) {
+    nodeMatrix matrix(rows, columns);
+
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < columns; ++j) {
+            auto node = matrix.getNode(i, j);
+            EXPECT_EQ(node->info, i * columns + j);
+            EXPECT_FALSE(node->visited);
+        }
+    }
+}
+
+TEST(nodeMatrixTest, MovePlayer) {
+    nodeMatrix matrix(rows, columns);
+    Player player("Player 1", {0, 0}, PlayerTurn::PLAYER1);
+
+    matrix.movePlayer(player, 'D');
+    EXPECT_EQ(player.getCurrentPosition(), std::make_pair(0, 1));
+
+    matrix.movePlayer(player, 'S');
+    EXPECT_EQ(player.getCurrentPosition(), std::make_pair(1, 1));
+
+    matrix.movePlayer(player, 'A');
+    EXPECT_EQ(player.getCurrentPosition(), std::make_pair(1, 0));
+
+    matrix.movePlayer(player, 'W');
+    EXPECT_EQ(player.getCurrentPosition(), std::make_pair(0, 0));
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
