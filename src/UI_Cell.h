@@ -3,7 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-const int CELL_SIZE = 50;
+const int CELL_SIZE = 100;
 #define BORDER_WIDTH 2
 using namespace std;
 

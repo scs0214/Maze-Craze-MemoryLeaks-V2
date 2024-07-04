@@ -16,7 +16,7 @@ public:
     ~UI_MAIN();
     bool initialize();
     SDL_Renderer* getRenderer() const;
-    void runMainProgram(SDL_Renderer* renderer);
+    void runMainProgram(SDL_Renderer* renderer, int** playerBoard, int rows, int cols);
 
 private:
     SDL_Window* window;

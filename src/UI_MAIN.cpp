@@ -1,7 +1,10 @@
 #include "UI_ImageLoader.h"
+#include "UI_Board.h"
 #include "UI_MAIN.h"
 #include <iostream>
 using namespace std;
+
+UI_Board uiBoard;
 
 UI_MAIN::UI_MAIN() : window(nullptr), renderer(nullptr) {}
 
@@ -62,10 +65,10 @@ SDL_Renderer* UI_MAIN::getRenderer() const {
     return renderer;
 }
 
-void UI_MAIN::runMainProgram(SDL_Renderer* renderer) {
+void UI_MAIN::runMainProgram(SDL_Renderer* renderer, int** playerBoard, int rows, int cols) {
     SDL_RenderClear(renderer);
 
-    // RENDER BOARD, POWERS, AND PLAYERS
+    uiBoard.renderBoard(renderer, playerBoard, rows, cols);
 
     SDL_RenderPresent(renderer);
 }
