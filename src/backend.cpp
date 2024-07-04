@@ -1,38 +1,47 @@
 #include <iostream>
+#include <stack>
+#include <queue>
 #include <random>
 #include <ctime>
-#include <cmath>
+#include <unordered_map>
+#include <vector>
+#include <string>
 
-const int rows = 4;
-const int columns = 4;
+const int rows = 10;
+const int columns = 10;
+const int directionSize = 4;
+const int sublistAmount = 2;
+const int startRow = 0;
+const int startColumn = 0;
+
+const double EXTRA_EDGE_PROB = 0.2;
 const double POWER_SPAWN_RATE = 0.1;
 const double PORTAL_SPAWN_RATE = 0.05;
 
 enum class PowerType { NONE, DOUBLE_PLAY, CONTROL_ENEMY, JUMP_WALL };
 
-class NodeCell {
+class nodeCell {
 public:
     int info;
     bool visited;
-    NodeCell* next;
+    nodeCell* next;
 
-    NodeCell(int d, bool t) : info(d), visited(t), next(nullptr) {}
+    nodeCell(int d, bool t) : info(d), visited(t), next(nullptr) {}
 };
 
-class Portal : public NodeCell {
+class Portal : public nodeCell {
 private:
     std::pair<int, int> portalA, portalB;
     bool hasPortal;
 
 public:
-    Portal() : NodeCell(0, false), hasPortal(false), portalA({0, 0}), portalB({0, 0}) {}
+    Portal() : nodeCell(0, false), hasPortal(false), portalA({-1, -1}), portalB({-1, -1}) {}
 
     void spawnPortals() {
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<> dis(0, 1);
         hasPortal = false;
-
         for (int i = 0; i < rows; ++i) {
             for (int j = 0; j < columns; ++j) {
                 if (!hasPortal && dis(gen) < PORTAL_SPAWN_RATE) {
@@ -56,17 +65,15 @@ public:
     }
 };
 
-class Power : public NodeCell {
+class Power : public nodeCell {
 private:
     bool powerPresence;
     PowerType powerType;
-    std::pair<int, int> position;
+    std::pair<int, int> position; // Add position attribute
 
 public:
-    Power() : NodeCell(0, false), powerPresence(false), powerType(PowerType::NONE), position(std::make_pair(0, 0)) {}
+    Power() : nodeCell(0, false), powerPresence(false), powerType(PowerType::NONE), position({-1, -1}) {}
 
-    Power(int r, int c) : NodeCell(0, false), powerPresence(false), powerType(PowerType::NONE), position(std::make_pair(r, c)) {}
-    
     void spawnPowers() {
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -75,10 +82,10 @@ public:
         for (int i = 0; i < rows; ++i) {
             for (int j = 0; j < columns; ++j) {
                 if (dis(gen) < POWER_SPAWN_RATE) {
-                    int type = std::rand() % 3; // Adjusted to include all PowerType enum values except NONE
-                    powerType = static_cast<PowerType>(type + 1); // Ensures it maps to DOUBLE_PLAY, CONTROL_ENEMY, or JUMP_WALL
+                    int type = rand() % 4; // Adjusted to include all PowerType enum values
+                    powerType = static_cast<PowerType>(type);
+                    position = std::make_pair(i, j); // Set the power's position
                     powerPresence = true;
-                    position = std::make_pair(i, j);
                     return;
                 }
             }
@@ -94,6 +101,41 @@ public:
     }
 
     std::pair<int, int> getPosition() const {
+        return position; 
+    }
+};
+
+
+class Treasure : public nodeCell{
+private:
+    std::pair<int, int> position;
+
+public:
+    Treasure() : nodeCell(-1, false), position({ -1, -1 }) {}
+
+    void placeTreasureEquidistant(int rows, int columns, const std::pair<int, int>& player1Start, const std::pair<int, int>& player2Start) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> disRow(0, rows - 1);
+        std::uniform_int_distribution<> disCol(0, columns - 1);
+
+        int row, col;
+        do {
+            row = disRow(gen);
+            col = disCol(gen);
+
+            int distanceToPlayer1 = std::abs(row - player1Start.first) + std::abs(col - player1Start.second);
+            int distanceToPlayer2 = std::abs(row - player2Start.first) + std::abs(col - player2Start.second);
+
+            if (distanceToPlayer1 == distanceToPlayer2) {
+                position = { row, col };
+                break;
+            }
+
+        } while (true);
+    }
+
+    std::pair<int, int> getPosition() const {
         return position;
     }
 };
@@ -106,11 +148,10 @@ private:
     std::pair<int, int> currentPosition;
     bool hasWon;
     PlayerTurn turn;
-    bool hasExtraMove; // Track if the player has an extra move due to DOUBLE_PLAY
 
 public:
     Player(const std::string& id, const std::pair<int, int>& startPos, PlayerTurn playerTurn)
-        : playerID(id), currentPosition(startPos), hasWon(false), turn(playerTurn), hasExtraMove(false) {}
+        : playerID(id), currentPosition(startPos), hasWon(false), turn(playerTurn) {}
 
     std::string getPlayerID() const {
         return playerID;
@@ -128,10 +169,6 @@ public:
         return turn;
     }
 
-    bool getHasExtraMove() const {
-        return hasExtraMove;
-    }
-
     void setPlayerID(const std::string& id) {
         playerID = id;
     }
@@ -146,10 +183,6 @@ public:
 
     void setTurn(PlayerTurn playerTurn) {
         turn = playerTurn;
-    }
-
-    void setHasExtraMove(bool extraMove) {
-        hasExtraMove = extraMove;
     }
 
     void move(char direction) {
@@ -176,86 +209,140 @@ public:
     }
 };
 
-class Treasure : public NodeCell {
+class nodeMatrix {
 private:
-    std::pair<int, int> position;
-
-public:
-    Treasure() : NodeCell(-1, false), position({ -1, -1 }) {}
-
-    void placeTreasureEquidistant(int rows, int columns, const std::pair<int, int>& player1Start, const std::pair<int, int>& player2Start) {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> disRow(0, rows - 1);
-        std::uniform_int_distribution<> disCol(0, columns - 1);
-
-        int row, col;
-        do {
-            row = disRow(gen);
-            col = disCol(gen);
-
-            int distanceToPlayer1 = std::abs(row - player1Start.first) + std::abs(col - player1Start.second);
-            int distanceToPlayer2 = std::abs(row - player2Start.first) + std::abs(col - player2Start.second);
-
-            if (distanceToPlayer1 == distanceToPlayer2) {
-                position = { row, col };
-                break;
-            }
-
-        } while (true);
-    }
-    
-    std::pair<int, int> Treasure::getPosition() const {
-        return position;
-    }
-
-};
-
-class NodeMatrix {
-private:
-    NodeCell*** matrix;
+    nodeCell*** matrix;
     Portal portal;
     Power power;
-    Treasure treasure;
+    Treasure treasure;  // Include treasure in nodeMatrix
 
     void initializeMatrix(int nodeRows, int nodeColumns) {
-        matrix = new NodeCell**[nodeRows];
-        int count = 0;
+        matrix = new nodeCell**[nodeRows];
         for (int i = 0; i < nodeRows; ++i) {
-            matrix[i] = new NodeCell*[nodeColumns];
+            matrix[i] = new nodeCell*[nodeColumns];
             for (int j = 0; j < nodeColumns; ++j) {
-                matrix[i][j] = new NodeCell(count, false);
-                count++;
+                matrix[i][j] = new nodeCell(i * nodeColumns + j, false);
             }
         }
     }
 
 public:
-    NodeMatrix(int nodeRows, int nodeColumns) {
+    nodeMatrix(int nodeRows, int nodeColumns) {
         initializeMatrix(nodeRows, nodeColumns);
         power.spawnPowers();
         portal.spawnPortals();
         treasure.placeTreasureEquidistant(nodeRows, nodeColumns,
-        std::make_pair(0, 0), std::make_pair(nodeRows - 1, nodeColumns - 1));
+                                          std::make_pair(0, 0), std::make_pair(nodeRows - 1, nodeColumns - 1));
     }
 
-    
-    NodeCell* getNode(int row, int column) const {
+    ~nodeMatrix() {
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < columns; ++j) {
+                delete matrix[i][j];
+            }
+            delete[] matrix[i];
+        }
+        delete[] matrix;
+    }
+
+    nodeCell* getNode(int row, int column) const {
         return matrix[row][column];
     }
 
-    void applyPowerEffect(NodeMatrix& matrix, Player& player, Player& otherPlayer, PowerType type) {
+    // Method to move player and check if they reach the treasure
+    void movePlayer(Player& player, char direction) {
+    std::pair<int, int> currentPosition = player.getCurrentPosition();
+    int currentRow = currentPosition.first;
+    int currentCol = currentPosition.second;
+
+    switch (direction) {
+        case 'W': // Up
+            if (currentRow > 0) {
+                player.move(direction);
+            } else {
+                std::cout << "Cannot move up. Boundary reached." << std::endl;
+            }
+            break;
+        case 'S': // Down
+            if (currentRow < rows - 1) {
+                player.move(direction);
+            } else {
+                std::cout << "Cannot move down. Boundary reached." << std::endl;
+            }
+            break;
+        case 'A': // Left
+            if (currentCol > 0) {
+                player.move(direction);
+            } else {
+                std::cout << "Cannot move left. Boundary reached." << std::endl;
+            }
+            break;
+        case 'D': // Right
+            if (currentCol < columns - 1) {
+                player.move(direction);
+            } else {
+                std::cout << "Cannot move right. Boundary reached." << std::endl;
+            }
+            break;
+        default:
+            std::cout << "Invalid move input." << std::endl;
+            break;
+    }
+
+    // Check if player has reached the treasure after the move
+    if (player.getCurrentPosition() == treasure.getPosition()) {
+        player.setHasWon(true);
+        std::cout << player.getPlayerID() << " has found the treasure and won!" << std::endl;
+    }
+
+    // Check if player is on a portal and teleport them if necessary
+    std::pair<int, int> playerPosition = player.getCurrentPosition();
+    Portal& currentPortal = getPortal();
+    if (playerPosition == currentPortal.getPortalAPosition()) {
+        player.setCurrentPosition(currentPortal.getPortalBPosition());
+        std::cout << player.getPlayerID() << " teleported to Portal B!" << std::endl;
+    } else if (playerPosition == currentPortal.getPortalBPosition()) {
+        player.setCurrentPosition(currentPortal.getPortalAPosition());
+        std::cout << player.getPlayerID() << " teleported to Portal A!" << std::endl;
+    }
+
+    // Check if player is on a power and apply its effect
+    Power& currentPower = getPower();
+    if (currentPower.isPowerPresent() && player.getCurrentPosition() == currentPower.getPosition()) {
+        PowerType type = currentPower.getPowerType();
+        switch (type) {
+            case PowerType::DOUBLE_PLAY:
+                std::cout << "DOUBLE PLAY activated!" << std::endl;
+                break;
+            case PowerType::CONTROL_ENEMY:
+                std::cout << "CONTROL ENEMY activated!" << std::endl;
+                break;
+            case PowerType::JUMP_WALL:
+                std::cout << "JUMP WALL activated!" << std::endl;
+                break;
+            case PowerType::NONE:
+                // Handle case where no power is present
+                std::cout << "No power present." << std::endl;
+                break;
+            default:
+                std::cout << "Unknown power type." << std::endl;
+                break;
+        }
+    }
+}
+
+    
+
+    // Method to apply the effect of a power on the player
+    void applyPowerEffect(Player& player, PowerType type) {
         switch (type) {
             case PowerType::DOUBLE_PLAY:
                 std::cout << player.getPlayerID() << " activated DOUBLE_PLAY!" << std::endl;
-                player.setHasExtraMove(true); // Allow an extra move
+                // Implement the effect of DOUBLE_PLAY (e.g., allow extra move)
                 break;
             case PowerType::CONTROL_ENEMY:
                 std::cout << player.getPlayerID() << " activated CONTROL_ENEMY!" << std::endl;
-                char moveInput;
-                std::cout << player.getPlayerID() << " controls " << otherPlayer.getPlayerID() << "'s move (WASD): ";
-                std::cin >> moveInput;
-                player.move(moveInput);
+                // Implement the effect of CONTROL_ENEMY (e.g., control opponent's move)
                 break;
             case PowerType::JUMP_WALL:
                 std::cout << player.getPlayerID() << " activated JUMP_WALL!" << std::endl;
@@ -274,8 +361,67 @@ public:
     Portal& getPortal() {
         return portal;
     }
-
-    Treasure& getTreasure() {
-        return treasure;
-    }
 };
+
+
+int main() {
+    // Initialize random seed
+    std::srand(std::time(nullptr));
+
+    // Create an instance of nodeMatrix
+    nodeMatrix matrix(rows, columns);
+    Portal portal;
+    portal.spawnPortals();
+
+    std::pair<int, int> positionA = portal.getPortalAPosition();
+    std::pair<int, int> positionB = portal.getPortalBPosition();
+
+    // Create players
+    Player player1("Player 1", std::make_pair(0, 0), PlayerTurn::PLAYER1);
+    Player player2("Player 2", std::make_pair(rows - 1, columns - 1), PlayerTurn::PLAYER2);
+
+    // Example of accessing player information
+    std::cout << "Player 1 ID: " << player1.getPlayerID() << std::endl;
+    std::cout << "Player 2 ID: " << player2.getPlayerID() << std::endl;
+
+    // Example of accessing current positions
+    std::cout << "Player 1 Current Position: (" << player1.getCurrentPosition().first
+              << ", " << player1.getCurrentPosition().second << ")" << std::endl;
+    std::cout << "Player 2 Current Position: (" << player2.getCurrentPosition().first
+              << ", " << player2.getCurrentPosition().second << ")" << std::endl;
+
+    // Move players based on keyboard input
+    char moveInput;
+    while (true) {
+        std::cout << "Player 1 move (WASD): ";
+        std::cin >> moveInput;
+        matrix.movePlayer(player1, moveInput);
+        std::cout << "Player 1 Current Position: (" << player1.getCurrentPosition().first
+                  << ", " << player1.getCurrentPosition().second << ")" << std::endl;
+
+        // Check if player 1 has won
+        if (player1.getHasWon()) {
+            std::cout << "Game over. " << player1.getPlayerID() << " has won!" << std::endl;
+            break;
+        }
+
+        std::cout << "Player 2 move (WASD): ";
+        std::cin >> moveInput;
+        matrix.movePlayer(player2, moveInput);
+        std::cout << "Player 2 Current Position: (" << player2.getCurrentPosition().first
+                  << ", " << player2.getCurrentPosition().second << ")" << std::endl;
+
+        // Check if player 2 has won
+        if (player2.getHasWon()) {
+            std::cout << "Game over. " << player2.getPlayerID() << " has won!" << std::endl;
+            break;
+        }
+    }
+
+    return 0;
+}
+
+
+
+ 
+
