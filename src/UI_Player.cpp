@@ -32,7 +32,7 @@ char UI_Player::processInputP1(char& direction) {
             }
         }
     }
-    return true;
+    return direction;
 }
 
 char UI_Player::processInputP2(char& direction) {
@@ -51,7 +51,7 @@ char UI_Player::processInputP2(char& direction) {
             }
         }
     }
-    return true;
+    return direction;
 }
 
 void UI_Player::setPosition(int rowBackend, int colBackend) {

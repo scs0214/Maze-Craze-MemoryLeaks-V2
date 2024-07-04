@@ -5,6 +5,7 @@
 #include "UI_MAIN.h"
 #include "UI_TitleScreen.h"
 #include "UI_Treasure.h"
+#include "UI_Player.h"
 #include <iostream>
 using namespace std;
 
@@ -17,6 +18,8 @@ int main(int argc, char* argv[]) {
         UI_MAIN uiMain;
         UI_TitleScreen uiTitleScreen;
         UI_Treasure uiWinScreen;
+        UI_Player uiPlayer;
+
 
         if (!uiMain.initialize()) {
             cerr << "Failed to initialize UI_MAIN." << endl;
@@ -61,17 +64,27 @@ int main(int argc, char* argv[]) {
                 if (event.type == SDL_QUIT) {
                     running = false;
                 }
+
                 if (currentGameState == TITLE_SCREEN) {
                     if (uiTitleScreen.buttonClick(event)) {
                         currentGameState = MAIN_PROGRAM;
                     }
-                } else if (currentGameState == MAIN_PROGRAM) {
-                    SDL_Delay(5000); // Handle events and modify backend
+                } 
+                
+                else if (currentGameState == MAIN_PROGRAM) {
                     while(direction == 'x') {
-
+                        if (playerTurn == 1) {
+                            direction = uiPlayer.processInputP1(direction);
+                        }
+                        else if (playerTurn == 2) {
+                            direction = uiPlayer.processInputP2(direction);
+                        }
+                        // Backend changes
                     }
+                    direction = 'x';
                     currentGameState = WIN_SCREEN; // Include IF Win Condition
                 }
+
                 else if (currentGameState == WIN_SCREEN) {
                     SDL_Delay(5000);
                     running = false;
