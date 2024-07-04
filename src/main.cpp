@@ -28,6 +28,21 @@ int main(int argc, char* argv[]) {
         SDL_Event event;
         bool running = true;
         char direction = 'x'; 
+        int playerTurn = 1;
+
+        int rowTest = 5;
+        int colTest = 5;
+        int** testMatrix = new int*[rowTest]; 
+        for (int i = 0; i < rowTest; i++) {
+            testMatrix[i] = new int[colTest];
+        }
+
+        testMatrix[0][0] = 1;
+        testMatrix[1][3] = 3;
+        testMatrix[4][3] = 4;
+        testMatrix[3][0] = 5;
+        testMatrix[1][4] = 6;
+        testMatrix[2][2] = 7;
 
         while (running) {
             // Renderer Section (renders the different GameStates)
@@ -35,7 +50,7 @@ int main(int argc, char* argv[]) {
                 uiTitleScreen.runTitleScreen(renderer);
             } else if (currentGameState == MAIN_PROGRAM) {
                 // Initialize Backend
-                uiMain.runMainProgram(renderer);
+                uiMain.runMainProgram(renderer, testMatrix, rowTest, colTest);
             }
             else if (currentGameState == WIN_SCREEN) {
                 uiWinScreen.runWinScreen(renderer, 1);
@@ -52,6 +67,9 @@ int main(int argc, char* argv[]) {
                     }
                 } else if (currentGameState == MAIN_PROGRAM) {
                     SDL_Delay(5000); // Handle events and modify backend
+                    while(direction == 'x') {
+
+                    }
                     currentGameState = WIN_SCREEN; // Include IF Win Condition
                 }
                 else if (currentGameState == WIN_SCREEN) {
